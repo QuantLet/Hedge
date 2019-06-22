@@ -1,6 +1,6 @@
 #Simulation study
 
-#Simulated priors by Chen et al.
+#Simulated parameters by Chen et al.
 n           = 30
 kappa       = 0.187  # Speed of volatility mean reversio
 theta       = 0.054  # Part of the long term mean of volatility
