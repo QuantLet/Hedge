@@ -1,0 +1,266 @@
+#Simulation study
+
+#Simulated priors by Chen et al.
+n           = 30
+kappa       = 0.187  # Speed of volatility mean reversio
+theta       = 0.054  # Part of the long term mean of volatility
+sigmav      = 0.0069  # Diffusion parameter of volatility (sig_v)
+rho         = 0.2748  # Brownin motion correlation
+mu_x        = -0.049  # Mean of price jump size
+var_x       = 2.06  # Variance of price jump size
+lambda      = 0.051  # Intensitiy of the pure jump process
+mu_vol      = 0.709  # Mean of volatility jump size
+rho_j       = -0.21  # Jumps correlation
+mu          = 0.0421  # Drift parameter of Returns
+
+
+svjc_price_sim    = function(n,kappa,theta,sigmav,rho,mu_x,var_x,lambda,mu_vol,rho_j,mu){
+  
+  #Storage vectors stochastic volatility component
+  #Storage vector
+  Y         = c(rep(0,n))                  #log returns
+  Jy        = c(rep(0,n))                  #jumps in log-returns
+  
+  #Storage vector jump component
+  V         = c(rep(0,n))                  #volatility
+  V[1]      = mu_vol                       #set volatility mean for initialization
+  Jv        = c(rep(0,n))                  #jumps in volatility
+  pois      = c(rep(0,n)) 
+  #Storage vector residuls
+  res       = c(rep(0,n-1))   
+  
+  #Simulated volatility
+  
+  for(i in 2:n){
+    
+    V[i]    = kappa * theta + (1 - kappa) * V[i-1] + sigmav * sqrt(V[i - 1]) * rnorm(1) + rexp(n = 1, rate = 1/mu_vol) * rpois(1,lambda) #+ (r-exp(mu_x + rho_j *  rexp(n = 1, rate = 1/mu_vol) + 0.5* var_x)) #risk neutral added
+    pois    = rpois(n, lambda)
+    Jv[i]   = rexp(n = 1, rate = 1/mu_vol)* pois[i]
+  }
+  
+  #Simulated returns
+  
+  for(i in 2:n){
+    Y[i]    = sqrt(V[i - 1]) * rnorm(1) + rnorm(n = 1, mean = mu_x + rho_j * rexp(n = 1, rate = 1/mu_vol), sd = var_x)* rpois(1,lambda)
+    Jy[i]   = rnorm(n = 1, mean = mu_x + rho_j *  rexp(n = 1, rate = 1/mu_vol), sd = var_x) * rpois(1,lambda)
+    
+  }
+  
+  #delete first row
+  
+  #Price conversion ln(St/St-1) = Rt 
+  price      = c(rep(0,n))
+  price[1]   = 100           #base value
+  
+  for(i in 2:n){
+    price[i] = (Y[i]/sqrt(252) + 1)*price[i-1]
+  }
+  
+  
+  return(price)
+  
+  
+}
+
+underlyingP  = svjc_price_sim(n,kappa,theta,sigmav,rho,mu_x,var_x,lambda,mu_vol,rho_j,mu)
+
+plot(underlyingP, type = "l", main = "Price path of the underlying St")
+
+#Path illustration
+
+iter         = 100
+
+pathplot     = replicate(30,svjc_price_sim(n,kappa,theta,sigmav,rho,mu_x,var_x,lambda,mu_vol,rho_j,mu))
+
+plot(pathplot[,1 ], type = "l", ylim = c(0,300),main = "Price paths of models under SVCJ dynamics")
+for (i in 2:n) {
+  lines(pathplot[,i], col = i, lwd = 2)
+} 
+
+
+
+
+
+
+#Create 10.000 paths 
+#commented out 
+"svjc_price_sim_Q   = function(n,kappa,theta,sigmav,rho,mu_x,var_x,lambda,mu_vol,rho_j,mu,r){
+  
+#Storage vectors stochastic volatility component
+#Storage vector
+Y         = c(rep(0,n))                  #log returns
+Jy        = c(rep(0,n))                  #jumps in log-returns
+
+#Storage vector jump component
+V         = c(rep(0,n))                  #volatility
+V[1]      = mu_vol                       #set volatility mean for initialization
+Jv        = c(rep(0,n))                  #jumps in volatility
+pois      = c(rep(0,n)) 
+#Storage vector residuls
+res       = c(rep(0,n-1))   
+
+#Simulated volatility
+
+for(i in 2:n){
+
+V[i]    = kappa * theta + (1 - kappa) * V[i-1] + sigmav * sqrt(V[i - 1]) * rnorm(1) + rexp(n = 1, rate = 1/mu_vol) * rpois(1,lambda) + (r-exp(mu_x + rho_j *  rexp(n = 1, rate = 1/mu_vol) + 0.5* var_x)) #risk neutral added
+pois    = rpois(n, lambda)
+Jv[i]   = rexp(n = 1, rate = 1/mu_vol)* pois[i]
+}
+
+#Simulated returns
+
+for(i in 2:n){
+Y[i]    = sqrt(V[i - 1]) * rnorm(1) + rnorm(n = 1, mean = mu_x + rho_j * rexp(n = 1, rate = 1/mu_vol), sd = var_x)* rpois(1,lambda)
+Jy[i]   = rnorm(n = 1, mean = mu_x + rho_j *  rexp(n = 1, rate = 1/mu_vol), sd = var_x) * rpois(1,lambda)
+
+}
+
+#delete first row
+
+#Price conversion ln(St/St-1) = Rt 
+price    = c(rep(0,n))
+price[1] = 100           #base value
+
+for(i in 2:n){
+price[i] = (Y[i]/sqrt(252) + 1)*price[i-1]
+}
+
+
+return(price)
+
+
+}
+
+
+iter = 10000
+r = 0.01
+paths = t(replicate(iter,svjc_price_sim_Q(n,kappa,theta,sigmav,rho,mu_x,var_x,lambda,mu_vol,rho_j,mu,r)))
+"
+
+
+iter    = 10000
+r       = 0.01
+paths   = t(replicate(iter,svjc_price_sim(n,kappa,theta,sigmav,rho,mu_x,var_x,lambda,mu_vol,rho_j,mu)))
+
+#dim(paths)
+
+S_T     = paths[,n]
+
+K       = 100
+
+strikes = c(0.75*K,K,K*1.25)
+
+matrica = matrix(rep(0,length(strikes)*iter), ncol = length(strikes))
+callprices = c(rep(0,length(strikes)))
+
+#dim(matrica)
+
+for(i in 1:length(strikes)){
+  matrica[,i] = pmax(S_T - rep(strikes[i],iter),0)
+  callprices = colMeans(matrica)
+}
+
+callprices
+
+#Compute implied volatility
+
+newton_vol_call = function(S, K, Time, C, r, sigma) {
+  
+  d1     = (log(S / K) + (r - 0.5 * sigma^2) * T) / (sigma * sqrt(T))
+  d2     = (log(S / K) + (r - 0.5 * sigma^2) * T) / (sigma * sqrt(T))
+  
+  fx     = S * pnorm(d1, 0.0, 1.0) - K * exp(-r * T) * pnorm(d2, 0.0, 1.0) - C
+  
+  vega   = (1 / sqrt(2 * pi)) * S * sqrt(T) * exp(-(pnorm(d1, 0.0, 1.0) ^ 2) * 0.5)
+  
+  tolerance = 0.000001
+  x0     = sigma
+  xnew   = x0
+  xold   = x0 - 1
+  
+  while(abs(xnew - xold) > tolerance) {
+    xold = xnew
+    xnew = (xnew - fx - C) / vega
+  }
+  
+ implied = abs(xnew)
+  return(implied)
+}
+
+#100 K
+#C call price 
+(bsimp  = newton_vol_call(underlyingP[n],100,30,callprices[2],0.01,0.1))
+
+#BS delta 
+
+
+delta   = function(spot,strike,vol,r,tau){
+  d1    = (log(spot/strike)+(r+(vol^2)/2)*tau)/(vol*sqrt(tau));
+  delta = pnorm(d1)
+  return(delta)
+}
+
+#Deltas under BS misspecification
+#tau = seq(30,0,-1)
+#deltas = c(rep(0,length(underlyingP)))
+#for(t in 1:length(underlyingP)){
+# deltas[t] = delta(underlyingP[t],100,bsimp,0.01,tau[t])
+#}
+
+#deltas
+
+
+
+deltas = matrix(0,nrow = nrow(paths),ncol = ncol(paths))
+period = ncol(paths)
+
+for(i in 1:nrow(paths)){
+  for(k in 1:ncol(paths)){
+    deltas[i,k] = delta(paths[i,k],100,vol = bsimp,r = 0.01,tau = 1-(k-1)/period)
+  }
+}
+
+#Hedge differences in delta 
+hedgediff      = t(apply(t(deltas), 2,diff))
+
+
+PnL            = matrix(0,nrow = nrow(paths),ncol = ncol(paths))
+
+
+for(i in 1: nrow(PnL)){
+  PnL[i,1]     = deltas[i,1]*paths[i,1]-callprices[2]
+}
+
+
+for(i in 1:nrow(PnL)){
+  for (k in 2:ncol(PnL)) {
+    PnL[i,k] = PnL[i,k-1]*exp(0.05/period)+hedgediff[i,k-1]*paths[i,k] 
+  }
+}
+
+
+final.position = PnL[,n]
+final.price    = paths[,n]
+final.pl       =  rep(0,iter)
+
+for(i in 1:iter){
+  if(final.price[i]>100)
+    final.pl[i] =  100-final.position[i]
+  else
+    final.pl[i] =  final.position[i]
+}
+
+hist(final.pl, main = "Delta hedge PnL", breaks = 50, border = "red", freq = F)
+
+
+
+
+
+
+
+
+
+
+
+
