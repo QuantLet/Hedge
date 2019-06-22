@@ -1,3 +1,7 @@
+## Clearing Variables and Close Windows
+rm(list     = ls(all = TRUE))
+graphics.off()
+
 #Simulation study
 
 #Simulated parameters by Chen et al.
